@@ -17,4 +17,5 @@ urlpatterns = [
     url(r'^auth/request/$', views.OIDCAuthRequestView.as_view(), name='oidc_auth_request'),
     url(r'^auth/cb/$', views.OIDCAuthCallbackView.as_view(), name='oidc_auth_callback'),
     url(r'^end-session/$', views.OIDCEndSessionView.as_view(), name='oidc_end_session'),
+    url(r'^token/$', views.OIDCAuthority.as_view(), name='oidc_token'),
 ]

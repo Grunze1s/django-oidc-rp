@@ -36,3 +36,14 @@ class OIDCUser(models.Model):
 
     def __str__(self):
         return str(self.user)
+
+
+    class OIDCPolling_Detail(models.Model):
+        polling_id = models.IntegerField()
+        access_token = models.CharField(max_length=240,blank=True)
+        id_token = models.TextField(max_length=400,blank=True)
+        refresh_token = models.CharField(max_length=240,blank=True)
+        status = models.CharField(default='KO',max_length=22)
+        
+        def __str__(self):
+            return '%s--%s' % (self.polling_id,self.status)

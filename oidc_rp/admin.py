@@ -8,7 +8,7 @@
 
 from django.contrib import admin
 
-from .models import OIDCUser
+from .models import OIDCUser, OIDCPolling_Detail
 
 
 @admin.register(OIDCUser)
@@ -16,3 +16,9 @@ class UserAdmin(admin.ModelAdmin):
     """ The OIDC user model admin. """
 
     list_display = ('sub', 'user', )
+
+@admin.register(OIDCPolling_Detail)
+class PollingDetail(admin.ModelAdmin):
+    """ The OIDC user model admin. """
+
+    list_display = ('polling_id', 'status', )

@@ -20,7 +20,7 @@ from django.utils.encoding import force_bytes, smart_text
 from django.utils.module_loading import import_string
 
 from .conf import settings as oidc_rp_settings
-from .models import OIDCUser
+from .models import OIDCUser, OIDCPolling_Detail
 from .signals import oidc_user_created
 from .utils import validate_and_return_id_token
 
@@ -40,13 +40,14 @@ class OIDCAuthBackend(ModelBackend):
         """ Authenticates users in case of the OpenID Connect Authorization code flow. """
         # NOTE: the request object is mandatory to perform the authentication using an authorization
         # code provided by the OIDC supplier.
+
         if (nonce is None and oidc_rp_settings.USE_NONCE) or request is None:
             return
 
         # Fetches required GET parameters from the HTTP request object.
         state = request.GET.get('state')
         code = request.GET.get('code')
-
+        
         # Don't go further if the state value or the authorization code is not present in the GET
         # parameters because we won't be able to get a valid token for the user in that case.
         if (state is None and oidc_rp_settings.USE_STATE) or code is None:
@@ -66,6 +67,7 @@ class OIDCAuthBackend(ModelBackend):
         token_response = requests.post(oidc_rp_settings.PROVIDER_TOKEN_ENDPOINT, data=token_payload)
         token_response.raise_for_status()
         token_response_data = token_response.json()
+
 
         # Validates the token.
         raw_id_token = token_response_data.get('id_token')
@@ -103,6 +105,8 @@ class OIDCAuthBackend(ModelBackend):
             oidc_user_created.send(sender=self.__class__, request=request, oidc_user=oidc_user)
         else:
             update_oidc_user_from_claims(oidc_user, userinfo_data)
+        
+        update_oidc_polling_details(state=state,access_token=access_token,id_token=raw_id_token,refresh_token=refresh_token)
 
         # Runs a custom user details handler if applicable. Such handler could be responsible for
         # creating / updating whatever is necessary to manage the considered user (eg. a profile).
@@ -119,8 +123,11 @@ def create_oidc_user_from_claims(claims):
     """ Creates an ``OIDCUser`` instance using the claims extracted from an id_token. """
     sub = claims['sub']
     email = claims.get('email')
+    first_name = claims.get('given_name')
+    last_name = claims.get('family_name')
     username = base64.urlsafe_b64encode(hashlib.sha1(force_bytes(sub)).digest()).rstrip(b'=')
-    user = get_user_model().objects.create_user(smart_text(username), email=email)
+    user = get_user_model().objects.create_user(smart_text(username), email=email, first_name=first_name, last_name=last_name,is_active=True)
+    print(user.is_active)
     oidc_user = OIDCUser.objects.create(user=user, sub=sub, userinfo=claims)
     return oidc_user
 
@@ -132,3 +139,12 @@ def update_oidc_user_from_claims(oidc_user, claims):
     oidc_user.save()
     oidc_user.user.email = claims.get('email')
     oidc_user.user.save()
+
+@transaction.atomic
+def update_oidc_polling_details(state,access_token,id_token,refresh_token):
+        OIDCPolling_Detail.objects.update_or_create(polling_id=state, defaults={
+            'access_token':access_token,
+            'id_token':id_token,
+            'refresh_token':refresh_token,
+            'status':'OK'
+        })

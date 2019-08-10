@@ -14,14 +14,16 @@ import time
 from django.conf import settings
 from django.contrib import auth
 from django.core.exceptions import SuspiciousOperation
-from django.http import HttpResponseRedirect, QueryDict
+from django.http import HttpResponseRedirect, QueryDict,JsonResponse
 from django.urls import reverse
 from django.utils.crypto import get_random_string
 from django.utils.http import is_safe_url, urlencode
 from django.views.generic import View
 
+from .models import OIDCPolling_Detail
 from .conf import settings as oidc_rp_settings
-
+import requests
+import random
 
 class OIDCAuthRequestView(View):
     """ Allows to start the authorization flow in order to authenticate the end-user.
@@ -44,14 +46,19 @@ class OIDCAuthRequestView(View):
             'client_id': oidc_rp_settings.CLIENT_ID,
             'redirect_uri': request.build_absolute_uri(reverse('oidc_auth_callback')),
         })
-
+        
+        polling_id = random.randint(0,999999999)
         # States should be used! They are recommended in order to maintain state between the
         # authentication request and the callback.
+        # if oidc_rp_settings.USE_STATE:
+        #     state = get_random_string(oidc_rp_settings.STATE_LENGTH)
+        #     authentication_request_params.update({'state': state})
+        #     request.session['oidc_auth_state'] = state
         if oidc_rp_settings.USE_STATE:
             state = get_random_string(oidc_rp_settings.STATE_LENGTH)
-            authentication_request_params.update({'state': state})
-            request.session['oidc_auth_state'] = state
-
+            authentication_request_params.update({'state': polling_id})
+            request.session['oidc_auth_state'] = polling_id
+            
         # Nonces should be used too! In that case the generated nonce is stored both in the
         # authentication request parameters and in the user's session.
         if oidc_rp_settings.USE_NONCE:
@@ -68,7 +75,16 @@ class OIDCAuthRequestView(View):
         query = urlencode(authentication_request_params)
         redirect_url = '{url}?{query}'.format(
             url=oidc_rp_settings.PROVIDER_AUTHORIZATION_ENDPOINT, query=query)
-        return HttpResponseRedirect(redirect_url)
+
+        OIDCPolling_Detail.objects.create(polling_id=polling_id)
+
+        if oidc_rp_settings.USE_AJAX:
+            return JsonResponse({
+                'redirect_url':redirect_url,
+                'pooling_id': polling_id
+            })
+        else:
+            return HttpResponseRedirect(redirect_url)
 
 
 class OIDCAuthCallbackView(View):
@@ -86,10 +102,11 @@ class OIDCAuthCallbackView(View):
     def get(self, request):
         """ Processes GET requests. """
         callback_params = request.GET
-
-        # Retrieve the state value that was previously generated. No state means that we cannot
+        
+        # Retrieve the state value that was previously gepnerated. No state means that we cannot
         # authenticate the user (so a failure should be returned).
-        state = request.session.get('oidc_auth_state', None)
+        state = str(request.session.get('oidc_auth_state', None))
+        # state = request.GET.get('state')
 
         # Retrieve the nonce that was previously generated and remove it from the current session.
         # If no nonce is available (while the USE_NONCE setting is set to True) this means that the
@@ -98,7 +115,7 @@ class OIDCAuthCallbackView(View):
 
         # NOTE: a redirect to the failure page should be return if some required GET parameters are
         # missing or if no state can be retrieved from the current session.
-
+        
         if (
             ((nonce and oidc_rp_settings.USE_NONCE) or not oidc_rp_settings.USE_NONCE) and
             ((state and oidc_rp_settings.USE_STATE) or not oidc_rp_settings.USE_STATE) and
@@ -113,6 +130,7 @@ class OIDCAuthCallbackView(View):
             # Authenticates the end-user.
             next_url = request.session.get('oidc_auth_next_url', None)
             user = auth.authenticate(nonce=nonce, request=request)
+
             if user and user.is_active:
                 auth.login(self.request, user)
                 # Stores an expiration timestamp in the user's session. This value will be used if
@@ -178,3 +196,12 @@ class OIDCEndSessionView(View):
         q[oidc_rp_settings.PROVIDER_END_SESSION_ID_TOKEN_PARAMETER] = \
             self.request.session['oidc_auth_id_token']
         return '{}?{}'.format(oidc_rp_settings.PROVIDER_END_SESSION_ENDPOINT, q.urlencode())
+
+class OIDCAuthority(View):
+
+    http_method_names = ['get', ]
+
+    def get(self, request):
+        
+        data = OIDCPolling_Detail.objects.filter(polling_id=request.GET.get("polling_id")).values()[0]
+        return JsonResponse(data)

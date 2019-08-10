@@ -1,5 +1,6 @@
 __version__ = '0.3.4'
 
+
 # Deploying a new version:
 # 1. remove the ".dev" from the current version number
 # 2. create a new commit (eg. "Prepared 0.1.1 release")

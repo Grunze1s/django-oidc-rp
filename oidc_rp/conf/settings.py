@@ -105,5 +105,5 @@ UNAUTHENTICATED_SESSION_MANAGEMENT_KEY = getattr(
 
 ### User defined
 USE_AJAX = getattr(
-    settings, 'OIDC_RP_USE_AJAX'. None)
+    settings, 'OIDC_RP_USE_AJAX', None)
 ### User defined end

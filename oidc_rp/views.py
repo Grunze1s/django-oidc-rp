@@ -105,8 +105,8 @@ class OIDCAuthCallbackView(View):
         
         # Retrieve the state value that was previously gepnerated. No state means that we cannot
         # authenticate the user (so a failure should be returned).
-        state = str(request.session.get('oidc_auth_state', None))
-        # state = request.GET.get('state')
+        # state = str(request.session.get('oidc_auth_state', None))
+        state = request.GET.get('state')
 
         # Retrieve the nonce that was previously generated and remove it from the current session.
         # If no nonce is available (while the USE_NONCE setting is set to True) this means that the

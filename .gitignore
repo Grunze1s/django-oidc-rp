@@ -101,3 +101,5 @@ tests/_testdata/static/
 
 # Env settings
 settings_env.py
+
+.vscode

@@ -102,3 +102,8 @@ USER_DETAILS_HANDLER = getattr(settings, 'OIDC_RP_USER_DETAILS_HANDLER', None)
 # Relying Party. The session_state value for anonymous users will be computed by using this key.
 UNAUTHENTICATED_SESSION_MANAGEMENT_KEY = getattr(
     settings, 'OIDC_RP_UNAUTHENTICATED_SESSION_MANAGEMENT_KEY', None)
+
+### User defined
+USE_AJAX = getattr(
+    settings, 'OIDC_RP_USE_AJAX'. None)
+### User defined end

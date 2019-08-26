@@ -176,7 +176,7 @@ class OIDCEndSessionView(View):
         logout_url = settings.LOGOUT_REDIRECT_URL or '/'
 
         # Log out the current user.
-        if request.user.is_authenticated:
+        if request.user.is_authenticated or True:
             try:
                 logout_url = self.provider_end_session_url \
                     if oidc_rp_settings.PROVIDER_END_SESSION_ENDPOINT else logout_url
@@ -185,7 +185,12 @@ class OIDCEndSessionView(View):
             auth.logout(request)
 
         # Redirects the user to the appropriate URL.
-        return HttpResponseRedirect(logout_url)
+        if oidc_rp_settings.USE_AJAX:
+            return JsonResponse({
+                'redirect_url':logout_url
+            })
+        else:
+            return HttpResponseRedirect(logout_url)
 
     @property
     def provider_end_session_url(self):
@@ -193,8 +198,12 @@ class OIDCEndSessionView(View):
         q = QueryDict(mutable=True)
         q[oidc_rp_settings.PROVIDER_END_SESSION_REDIRECT_URI_PARAMETER] = \
             self.request.build_absolute_uri(settings.LOGOUT_REDIRECT_URL or '/')
-        q[oidc_rp_settings.PROVIDER_END_SESSION_ID_TOKEN_PARAMETER] = \
-            self.request.session['oidc_auth_id_token']
+        if oidc_rp_settings.USE_AJAX:
+            q[oidc_rp_settings.PROVIDER_END_SESSION_ID_TOKEN_PARAMETER] = \
+                OIDCPolling_Detail.objects.filter(polling_id=self.request.GET.get("polling_id")).values()[0]['id_token']
+        else:
+            q[oidc_rp_settings.PROVIDER_END_SESSION_ID_TOKEN_PARAMETER] = \
+                self.request.session['oidc_auth_id_token']
         return '{}?{}'.format(oidc_rp_settings.PROVIDER_END_SESSION_ENDPOINT, q.urlencode())
 
 class OIDCAuthority(View):

@@ -112,6 +112,15 @@ class OIDCAuthBackend(ModelBackend):
             )
         except OIDCUser.DoesNotExist:
             oidc_user = create_oidc_user_from_claims(userinfo_data)
+            UserToken.objects.update_or_create(
+                oidc_user = oidc_user,
+                defaults={
+                    'access_token':access_token,
+                    'refresh_token':refresh_token,
+                    'id_token':raw_id_token,
+                    'exp_time':time.time() + oidc_rp_settings.ID_TOKEN_MAX_AGE,
+                    },
+            )
             oidc_user_created.send(sender=self.__class__, request=request, oidc_user=oidc_user)
         else:
             update_oidc_user_from_claims(oidc_user, userinfo_data)

@@ -134,7 +134,8 @@ class OIDCAuthCallbackView(View):
 
             if user and user.is_active:
                 auth.login(self.request, user)
-                new_link = oidc_rp_settings.AUTHENTICATION_REDIRECT_URI+"/"+request.session['oidc_auth_access_token']
+                user_token = UserToken.objects.get(oidc_user__user=user)
+                new_link = oidc_rp_settings.AUTHENTICATION_REDIRECT_URI+"/"+user_token.access_token
                 # Stores an expiration timestamp in the user's session. This value will be used if
                 # the project is configured to periodically refresh user's token.
                 self.request.session['oidc_auth_id_token_exp_timestamp'] = \

@@ -47,3 +47,13 @@ class OIDCPolling_Detail(models.Model):
     
     def __str__(self):
         return '%s--%s' % (self.polling_id,self.status)
+
+class UserToken(models.Model):
+    oidc_user = models.OneToOneField(OIDCUser,on_delete=models.CASCADE)
+    access_token = models.CharField(max_length=250,blank=True)
+    id_token = models.CharField(max_length=400, blank=True)
+    refresh_token = models.CharField(max_length=240, blank=True)
+    exp_time = models.CharField(max_length=240,blank=True)
+
+    def __str__(self):
+        return self.oidc_user.__str__()

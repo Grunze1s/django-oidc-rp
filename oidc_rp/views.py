@@ -19,8 +19,9 @@ from django.urls import reverse
 from django.utils.crypto import get_random_string
 from django.utils.http import is_safe_url, urlencode
 from django.views.generic import View
+from django.core.exceptions import PermissionDenied
 
-from .models import OIDCPolling_Detail
+from .models import OIDCPolling_Detail,UserToken
 from .conf import settings as oidc_rp_settings
 import requests
 import random
@@ -133,6 +134,7 @@ class OIDCAuthCallbackView(View):
 
             if user and user.is_active:
                 auth.login(self.request, user)
+                new_link = oidc_rp_settings.AUTHENTICATION_REDIRECT_URI+"/"+request.session['oidc_auth_access_token']
                 # Stores an expiration timestamp in the user's session. This value will be used if
                 # the project is configured to periodically refresh user's token.
                 self.request.session['oidc_auth_id_token_exp_timestamp'] = \
@@ -144,7 +146,7 @@ class OIDCAuthCallbackView(View):
                     callback_params.get('session_state', None)
 
                 return HttpResponseRedirect(
-                    next_url or oidc_rp_settings.AUTHENTICATION_REDIRECT_URI)
+                    next_url or new_link)
 
         if 'error' in callback_params:
             # If we receive an error in the callback GET parameters, this means that the
@@ -214,3 +216,23 @@ class OIDCAuthority(View):
         
         data = OIDCPolling_Detail.objects.filter(polling_id=request.GET.get("polling_id")).values()[0]
         return JsonResponse(data)
+
+class OIDCRefreshTokenRF(View):
+    
+    http_method_names = ['get', ]
+
+    def get(self, request):
+        user_token = None
+        if request.session['oidc_auth_access_token']:
+            header = request.session.pop('oidc_auth_access_token')
+            try:
+                user_token = UserToken.objects.get(access_token=header)
+            except:
+                raise PermissionDenied()
+        return JsonResponse(
+            {
+                'access_token':user_token.access_token,
+                'refresh_token':user_token.refresh_token,
+                'exp_time':user_token.exp_time,
+            }
+        )

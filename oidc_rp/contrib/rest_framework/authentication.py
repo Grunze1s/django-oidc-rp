@@ -15,7 +15,7 @@ from rest_framework.exceptions import AuthenticationFailed
 
 from oidc_rp.backends import create_oidc_user_from_claims, update_oidc_user_from_claims
 from oidc_rp.conf import settings as oidc_rp_settings
-from oidc_rp.models import OIDCUser
+from oidc_rp.models import OIDCUser,UserToken
 from oidc_rp.signals import oidc_user_created
 
 
@@ -63,5 +63,5 @@ class BearerTokenAuthentication(BaseAuthentication):
             oidc_user_created.send(sender=self.__class__, request=request, oidc_user=oidc_user)
         else:
             update_oidc_user_from_claims(oidc_user, userinfo_response_data)
-
+        
         return oidc_user.user, bearer_token

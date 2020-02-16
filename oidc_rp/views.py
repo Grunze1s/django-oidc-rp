@@ -21,7 +21,7 @@ from django.utils.http import is_safe_url, urlencode
 from django.views.generic import View
 from django.core.exceptions import PermissionDenied
 
-from .models import OIDCPolling_Detail,UserToken
+from .models import UserToken
 from .conf import settings as oidc_rp_settings
 import requests
 import random
@@ -48,17 +48,12 @@ class OIDCAuthRequestView(View):
             'redirect_uri': request.build_absolute_uri(reverse('oidc_auth_callback')),
         })
         
-        polling_id = random.randint(0,999999999)
         # States should be used! They are recommended in order to maintain state between the
         # authentication request and the callback.
-        # if oidc_rp_settings.USE_STATE:
-        #     state = get_random_string(oidc_rp_settings.STATE_LENGTH)
-        #     authentication_request_params.update({'state': state})
-        #     request.session['oidc_auth_state'] = state
         if oidc_rp_settings.USE_STATE:
             state = get_random_string(oidc_rp_settings.STATE_LENGTH)
-            authentication_request_params.update({'state': polling_id})
-            request.session['oidc_auth_state'] = polling_id
+            authentication_request_params.update({'state': state})
+            request.session['oidc_auth_state'] = state
             
         # Nonces should be used too! In that case the generated nonce is stored both in the
         # authentication request parameters and in the user's session.
@@ -76,16 +71,8 @@ class OIDCAuthRequestView(View):
         query = urlencode(authentication_request_params)
         redirect_url = '{url}?{query}'.format(
             url=oidc_rp_settings.PROVIDER_AUTHORIZATION_ENDPOINT, query=query)
-
-        OIDCPolling_Detail.objects.create(polling_id=polling_id)
-
-        if oidc_rp_settings.USE_AJAX:
-            return JsonResponse({
-                'redirect_url':redirect_url,
-                'pooling_id': polling_id
-            })
-        else:
-            return HttpResponseRedirect(redirect_url)
+        
+        return HttpResponseRedirect(redirect_url)
 
 
 class OIDCAuthCallbackView(View):
@@ -188,12 +175,12 @@ class OIDCEndSessionView(View):
             auth.logout(request)
 
         # Redirects the user to the appropriate URL.
-        if oidc_rp_settings.USE_AJAX:
-            return JsonResponse({
-                'redirect_url':logout_url
-            })
-        else:
-            return HttpResponseRedirect(logout_url)
+        # if oidc_rp_settings.USE_AJAX:
+        #     return JsonResponse({
+        #         'redirect_url':logout_url
+        #     })
+        # else:
+        return HttpResponseRedirect(logout_url)
 
     @property
     def provider_end_session_url(self):
@@ -201,12 +188,12 @@ class OIDCEndSessionView(View):
         q = QueryDict(mutable=True)
         q[oidc_rp_settings.PROVIDER_END_SESSION_REDIRECT_URI_PARAMETER] = \
             self.request.build_absolute_uri(settings.LOGOUT_REDIRECT_URL or '/')
-        if oidc_rp_settings.USE_AJAX:
-            q[oidc_rp_settings.PROVIDER_END_SESSION_ID_TOKEN_PARAMETER] = \
-                OIDCPolling_Detail.objects.filter(polling_id=self.request.GET.get("polling_id")).values()[0]['id_token']
-        else:
-            q[oidc_rp_settings.PROVIDER_END_SESSION_ID_TOKEN_PARAMETER] = \
-                self.request.session['oidc_auth_id_token']
+        # if oidc_rp_settings.USE_AJAX:
+        #     q[oidc_rp_settings.PROVIDER_END_SESSION_ID_TOKEN_PARAMETER] = \
+        #         OIDCPolling_Detail.objects.filter(polling_id=self.request.GET.get("polling_id")).values()[0]['id_token']
+        # else:
+        q[oidc_rp_settings.PROVIDER_END_SESSION_ID_TOKEN_PARAMETER] = \
+            self.request.session['oidc_auth_id_token']
         return '{}?{}'.format(oidc_rp_settings.PROVIDER_END_SESSION_ENDPOINT, q.urlencode())
 
 class OIDCAuthority(View):

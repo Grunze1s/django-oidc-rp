@@ -116,7 +116,7 @@ class OIDCAuthBackend(ModelBackend):
                 'exp_time':time.time() + oidc_rp_settings.ID_TOKEN_MAX_AGE,
                 },
         )
-        update_oidc_polling_details(state=state,access_token=access_token,id_token=raw_id_token,refresh_token=refresh_token)
+        # update_oidc_polling_details(state=state,access_token=access_token,id_token=raw_id_token,refresh_token=refresh_token)
 
         # Runs a custom user details handler if applicable. Such handler could be responsible for
         # creating / updating whatever is necessary to manage the considered user (eg. a profile).
@@ -151,11 +151,11 @@ def update_oidc_user_from_claims(oidc_user, claims):
     oidc_user.user.email = claims.get('email')
     oidc_user.user.save()
 
-@transaction.atomic
-def update_oidc_polling_details(state,access_token,id_token,refresh_token):
-        OIDCPolling_Detail.objects.update_or_create(polling_id=state, defaults={
-            'access_token':access_token,
-            'id_token':id_token,
-            'refresh_token':refresh_token,
-            'status':'OK'
-        })
+# @transaction.atomic
+# def update_oidc_polling_details(state,access_token,id_token,refresh_token):
+#         OIDCPolling_Detail.objects.update_or_create(polling_id=state, defaults={
+#             'access_token':access_token,
+#             'id_token':id_token,
+#             'refresh_token':refresh_token,
+#             'status':'OK'
+#         })

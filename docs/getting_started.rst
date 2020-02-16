@@ -70,6 +70,7 @@ Finally add the ``oidc_rp.middleware.OIDCRefreshIDTokenMiddleware`` middleware t
     MIDDLEWARE = (
         # Other middlewares
         'oidc_rp.middleware.OIDCRefreshIDTokenMiddleware',
+        'oidc_rp.middleware.OIDCRefreshIDTokenMiddlewareRF',
     )
 
 .. note::
@@ -88,6 +89,9 @@ Use the values provided by your OpenID Connect provider (OP) to configure the fo
     OIDC_RP_PROVIDER_ENDPOINT = 'https://id.example.com/a/'
     OIDC_RP_CLIENT_ID = '<CLIENT_ID>'
     OIDC_RP_CLIENT_SECRET = '<CLIENT_SECRET>'
+    OIDC_RP_END_SESSION_ENDPOINT = 'https://id.example.com/a/end-session/'
+    OIDC_RP_USE_NONCE = False
+    OIDC_RP_USE_STATE = True
 
 .. warning::
 

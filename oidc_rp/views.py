@@ -95,14 +95,12 @@ class OIDCAuthCallbackView(View):
         # authenticate the user (so a failure should be returned).
         # state = str(request.session.get('oidc_auth_state', None))
         state = request.GET.get('state')
-        print("I am inside callback")
-        print(state)
 
         # Retrieve the nonce that was previously generated and remove it from the current session.
         # If no nonce is available (while the USE_NONCE setting is set to True) this means that the
         # authentication cannot be performed and so we have redirect the user to a failure URL.
         nonce = request.session.pop('oidc_auth_nonce', None)
-
+        print("after nonce")
         # NOTE: a redirect to the failure page should be return if some required GET parameters are
         # missing or if no state can be retrieved from the current session.
         
@@ -111,14 +109,18 @@ class OIDCAuthCallbackView(View):
             ((state and oidc_rp_settings.USE_STATE) or not oidc_rp_settings.USE_STATE) and
             ('code' in callback_params and 'state' in callback_params)
         ):
+            print("inside if")
             # Ensures that the passed state values is the same as the one that was previously
             # generated when forging the authorization request. This is necessary to mitigate
             # Cross-Site Request Forgery (CSRF, XSRF).
             if oidc_rp_settings.USE_STATE and callback_params['state'] != state:
+                print("raised suspicious operations")
                 raise SuspiciousOperation('Invalid OpenID Connect callback state value')
 
             # Authenticates the end-user.
             next_url = request.session.get('oidc_auth_next_url', None)
+            print("next_url")
+            print(next_url)
             user = auth.authenticate(nonce=nonce, request=request)
             print("user authorized")
             if user and user.is_active:

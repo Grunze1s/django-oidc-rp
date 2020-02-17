@@ -95,6 +95,8 @@ class OIDCAuthCallbackView(View):
         # authenticate the user (so a failure should be returned).
         # state = str(request.session.get('oidc_auth_state', None))
         state = request.GET.get('state')
+        print("I am inside callback")
+        print(state)
 
         # Retrieve the nonce that was previously generated and remove it from the current session.
         # If no nonce is available (while the USE_NONCE setting is set to True) this means that the
@@ -118,7 +120,7 @@ class OIDCAuthCallbackView(View):
             # Authenticates the end-user.
             next_url = request.session.get('oidc_auth_next_url', None)
             user = auth.authenticate(nonce=nonce, request=request)
-
+            print("user authorized")
             if user and user.is_active:
                 auth.login(self.request, user)
                 user_token = UserToken.objects.get(oidc_user__user=user)
@@ -132,7 +134,8 @@ class OIDCAuthCallbackView(View):
                 # relying parties (RP).
                 self.request.session['oidc_auth_session_state'] = \
                     callback_params.get('session_state', None)
-
+                print("ready to send response")
+                print(new_link)
                 return HttpResponseRedirect(
                     next_url or new_link)
 
